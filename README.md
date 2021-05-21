@@ -35,7 +35,7 @@ Usage:
 * Just give it an album or artist url from http://musify.club/ as argument, see below:
 
 ```
-Python script to download albums from https://musify.club, version 5.10.
+Python script to download albums from https://musify.club, version 5.11.
 
 ------------------------------------------------------------------------------------------------------------------
 ################## To download an album, give it an url with '/release/' in it #####################################
