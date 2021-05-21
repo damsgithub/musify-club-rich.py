@@ -6,6 +6,7 @@
 # as published by Sam Hocevar.  See the COPYING file for more details.
 
 # Changelog:
+# 5.11: adaptations for new site (musify)
 # 5.10: corrections, cosmetic
 # 5.9: corrections, cosmetic
 # 5.8: better rich interface
@@ -17,7 +18,7 @@
 live = 1
 site = "https://musify.club"
 userequests = 1
-version = 5.10
+version = 5.11
 useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0"
 min_page_size = 8192
 covers_name = "cover.jpg"
@@ -785,7 +786,6 @@ def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_c
 
     os.chdir(album_dir)
 
-    color_message("HERE", error_color)
     download_cover(
         page_content,
         url,
