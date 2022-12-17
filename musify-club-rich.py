@@ -729,14 +729,12 @@ def download_file(url, file_name, debug, socks_proxy, socks_port, timeout, task_
         return -1
 
 
-def download_song(num_and_url, debug, socks_proxy, socks_port, timeout, task_id: TaskID, event) -> None:
+def download_song(num_and_url, track_name, debug, socks_proxy, socks_port, timeout, task_id: TaskID, event) -> None:
     process_id = os.getpid()
 
     m = re.match(r"^(\d+)-(.+)", num_and_url)
-    tracknum = m.group(1)
     file_url = m.group(2)
-    file_name = num_and_url.split("/")[-1]
-    file_name = tracknum + "-" + file_name
+    file_name = track_name
 
     while True:  # continue until we have the song or the user interrupts it
         try:
@@ -779,7 +777,6 @@ def download_song(num_and_url, debug, socks_proxy, socks_port, timeout, task_id:
             pause_between_retries()
             pass
 
-
 def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_conn, event, alt_dir_fmt):
     reset_errors()
     reset_progress()
@@ -821,7 +818,7 @@ def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_c
 
         #color_message("track: %s" % (div_link), warning_color)
         tracknum_infos_re = re.compile(
-            '<div (?:.*?)data-position="(\d+)"(?:.*?) data-url="(.+\.mp3)"',
+            '<div (?:.*?)data-position="(\d+)"(?:.*?) data-title="(.+)" data-url="(.+\.mp3)"',
             re.I,
         )
 
@@ -830,7 +827,10 @@ def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_c
         if tracknum_infos:
             tracknum = tracknum_infos.group(1)
             tracknum = str(tracknum).zfill(2)
-            link_href = tracknum_infos.group(2)
+            link_href = tracknum_infos.group(3)
+            track_title=tracknum_infos.group(2)
+            track_title=track_title[track_title.find("-")+2:]+link_href[link_href.find("."):]
+            track_title = track_title.replace("/","_")
             if debug:
                 color_message("** Got number %s for %s **" % (tracknum, link_href), warning_color)            
         else:
@@ -842,7 +842,7 @@ def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_c
             link_href = get_base_url(url, debug) + link_href
 
         # add song url and number in array
-        songs_links.append(str(tracknum) + "-" + link_href)
+        songs_links.append((str(tracknum) + "-" + link_href, track_title))
 
     if debug > 1:
         log_to_file("download_album", page_content)
@@ -879,9 +879,9 @@ def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_c
         # we launch the threads to do the downloads
         try:
             with ThreadPoolExecutor(max_workers=nb_conn) as pool:
-                for num_and_url in songs_links:
+                for num_and_url, track_t in songs_links:
                     task_id = dl_progress.add_task("download", filename=num_and_url.split("/")[-1], start=False)
-                    pool.submit(download_song, num_and_url, debug, socks_proxy, socks_port, timeout, task_id, event)
+                    pool.submit(download_song, num_and_url, track_t, debug, socks_proxy, socks_port, timeout, task_id, event)
                     if event.is_set():
                         # color_message("** download_album: IS SET", error_color)
                         raise KeyboardInterrupt
