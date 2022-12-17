@@ -416,7 +416,7 @@ def get_page_soup(url, data, debug, socks_proxy, socks_port, timeout, event):
     return page_soup
 
 
-def prepare_album_dir(page_content, base_path, debug):
+def prepare_album_dir(page_content, base_path, debug, alt_dir_fmt):
     # get album infos from html page content
     artist = ""
     title = ""
@@ -486,17 +486,29 @@ def prepare_album_dir(page_content, base_path, debug):
     layout["left"].update(Panel(infos_table))
 
     # prepare album's directory
-    if year:
-        album_dir = artist + " - " + title + " (" + year + ")"
+    if (alt_dir_fmt is None):
+        if year:
+            album_dir = artist + " - " + title + " (" + year + ")"
+        else:
+            album_dir = artist + " - " + title
+
+        album_dir = os.path.normpath(base_path + os.sep + sanitize_path(album_dir))
+        if debug:
+            color_message("Album's dir: %s" % (album_dir), debug_color)
+
+        if not os.path.exists(album_dir):
+            os.mkdir(album_dir)
     else:
-        album_dir = artist + " - " + title
+        album_dir = title
+        artist_dir = os.path.normpath(base_path + os.sep + sanitize_path(artist))
+        album_dir = os.path.normpath(base_path + os.sep + artist + os.sep + sanitize_path(album_dir))
+        if debug:
+            color_message("Album's dir: %s" % (album_dir), debug_color)
 
-    album_dir = os.path.normpath(base_path + os.sep + sanitize_path(album_dir))
-    if debug:
-        color_message("Album's dir: %s" % (album_dir), debug_color)
-
-    if not os.path.exists(album_dir):
-        os.mkdir(album_dir)
+        if not os.path.exists(artist_dir):
+            os.mkdir(artist_dir)
+        if not os.path.exists(album_dir):
+            os.mkdir(album_dir)
 
     return album_dir
 
@@ -768,7 +780,7 @@ def download_song(num_and_url, debug, socks_proxy, socks_port, timeout, task_id:
             pass
 
 
-def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_conn, event):
+def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_conn, event, alt_dir_fmt):
     reset_errors()
     reset_progress()
 
@@ -782,7 +794,7 @@ def download_album(url, base_path, debug, socks_proxy, socks_port, timeout, nb_c
     # We need to convert them back with html.unescape.
     page_content = html.unescape(page_content)
 
-    album_dir = prepare_album_dir(page_content, base_path, debug)
+    album_dir = prepare_album_dir(page_content, base_path, debug, alt_dir_fmt)
 
     os.chdir(album_dir)
 
@@ -967,6 +979,8 @@ def main():
                         help="Base directory in which album(s) will be downloaded. Defaults to current.")
     parser.add_argument("-v", "--version", action="version", version="%(prog)s, version: " + str(version))
 
+    parser.add_argument("-ad", "--artist_directory", action="store_true", default="False", help="Store album in /<artist>/<album>/ format")
+
     parser.add_argument("url", action="store", help="URL of album or artist page")
 
     args = parser.parse_args()
@@ -1000,7 +1014,7 @@ def main():
                 if re.search(r"/artist/.*", args.url, re.IGNORECASE):
                     download_artist(args.url, args.path, debug, socks_proxy, socks_port, timeout, nb_conn, event)
                 elif re.search(r"/release/.*", args.url, re.IGNORECASE):
-                    download_album(args.url, args.path, debug, socks_proxy, socks_port, timeout, nb_conn, event)
+                    download_album(args.url, args.path, debug, socks_proxy, socks_port, timeout, nb_conn, event, args.artist_directory)
                 else:
                     color_message(
                         "** Error: unable to recognize url, it should contain '/artist/' or '/release/'! **",
@@ -1010,7 +1024,7 @@ def main():
             if re.search(r"/artist/.*", args.url, re.IGNORECASE):
                 download_artist(args.url, args.path, debug, socks_proxy, socks_port, timeout, nb_conn, event)
             elif re.search(r"/release/.*", args.url, re.IGNORECASE):
-                download_album(args.url, args.path, debug, socks_proxy, socks_port, timeout, nb_conn, event)
+                download_album(args.url, args.path, debug, socks_proxy, socks_port, timeout, nb_conn, event, args.artist_directory)
             else:
                 color_message(
                     "** Error: unable to recognize url, it should contain '/artist/' or '/release/'! **",
